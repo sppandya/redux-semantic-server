@@ -10,12 +10,16 @@ export function setEntries(state, entries) {
 
 function getWinners(vote) {
   if (!vote) return [];
-  const [one, two] = vote.get('pair');
+  const [one, two, three, four] = vote.get('pair');
   const oneVotes = vote.getIn(['tally', one], 0);
   const twoVotes = vote.getIn(['tally', two], 0);
-  if      (oneVotes > twoVotes)  return [one];
-  else if (oneVotes < twoVotes)  return [two];
-  else                           return [one, two];
+  const threeVotes = vote.getIn(['tally', three], 0);
+  const fourVotes = vote.getIn(['tally', four], 0);
+  if(oneVotes > twoVotes && oneVotes > threeVotes && oneVotes > fourVotes)  return [one];
+  else if (oneVotes < twoVotes && twoVotes > threeVotes && twoVotes > fourVotes)  return [two];
+  else if (oneVotes < threeVotes && twoVotes < threeVotes && fourVotes < threeVotes)  return [three];
+  else if (oneVotes < fourVotes && twoVotes < fourVotes && threeVotes < fourVotes) return [four];
+  else return [one, two, three, four];
 }
 
 export function next(state, round = state.getIn(['vote', 'round'], 0)) {
@@ -29,9 +33,9 @@ export function next(state, round = state.getIn(['vote', 'round'], 0)) {
     return state.merge({
       vote: Map({
         round: round + 1,
-        pair: entries.take(2)
+        pair: entries.take(4)
       }),
-      entries: entries.skip(2)
+      entries: entries.skip(4)
     });
   }
 }
@@ -46,8 +50,9 @@ export function restart(state) {
   );
 }
 
-function removePreviousVote(voteState, voter) {
+function removePreviousVote(voteState, voter) { console.log('second');
   const previousVote = voteState.getIn(['votes', voter]);
+  console.log(previousVote);
   if (previousVote) {
     return voteState.updateIn(['tally', previousVote], t => t - 1)
                     .removeIn(['votes', voter]);
@@ -57,6 +62,10 @@ function removePreviousVote(voteState, voter) {
 }
 
 function addVote(voteState, entry, voter) {
+  console.log(voteState);
+  console.log(entry);
+  console.log(voter);
+  console.log(voteState.get('pair').includes(entry));
   if (voteState.get('pair').includes(entry)) {
     return voteState.updateIn(['tally', entry], 0, t => t + 1)
                     .setIn(['votes', voter], entry);
@@ -65,7 +74,7 @@ function addVote(voteState, entry, voter) {
   }
 }
 
-export function vote(voteState, entry, voter) {
+export function vote(voteState, entry, voter) { console.log('first');
   return addVote(
     removePreviousVote(voteState, voter),
     entry,
